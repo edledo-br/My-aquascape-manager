@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaScape Manager - Gestão de Aquários Plantados</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        aqua: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            900: '#134e4a',
+                        },
+                        plant: {
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full flex flex-col antialiased selection:bg-aqua-500 selection:text-white custom-scrollbar">
+
+    <!-- Toast Notification System -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-x-full opacity-0 flex items-center p-4 mb-4 text-slate-200 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl space-x-3 max-w-xs">
+        <div id="toast-icon" class="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+        </div>
+        <div id="toast-message" class="text-sm font-medium">Ação realizada com sucesso!</div>
+    </div>
+
+    <!-- Layout Wrapper -->
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar / Navigation Mobile Dropdown & Desktop Side Nav -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-950/95 backdrop-blur-md border-r border-slate-800 transition-transform duration-300 -translate-x-full md:translate-x-0 flex flex-col justify-between">
+            <div>
+                <!-- Brand Header -->
+                <div class="flex items-center justify-between p-5 border-b border-slate-800/80">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 bg-gradient-to-tr from-aqua-600 to-plant-500 rounded-xl shadow-lg shadow-aqua-500/20">
+                            <i data-lucide="waves" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-teal-200 to-emerald-400 bg-clip-text text-transparent">AquaScape</h1>
+                            <span class="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Pro Planted Manager</span>
+                        </div>
+                    </div>
+                    <button id="close-sidebar-btn" class="md:hidden text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-4 space-y-1.5">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all bg-aqua-600/20 text-aqua-400 border border-aqua-500/30">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('parameters')" id="nav-parameters" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition-all">
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                        <span>Parâmetros & TPA</span>
+                    </button>
+                    <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition-all">
+                        <i data-lucide="fish" class="w-5 h-5"></i>
+                        <span>Fauna, Flora & Setup</span>
+                    </button>
+                    <button onclick="switchTab('timeline')" id="nav-timeline" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition-all">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                        <span>Diário & Evolução</span>
+                    </button>
+                    <button onclick="switchTab('calculators')" id="nav-calculators" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition-all">
+                        <i data-lucide="calculator" class="w-5 h-5"></i>
+                        <span>Calculadoras</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Active Tank Summary Footnote -->
+            <div class="p-4 m-4 rounded-xl bg-slate-900 border border-slate-800/80">
+                <div class="flex items-center space-x-3">
+                    <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <div class="truncate">
+                        <p id="sidebar-tank-name" class="text-xs font-semibold text-slate-200 truncate">Amazonas Nature 120L</p>
+                        <p id="sidebar-tank-info" class="text-[11px] text-slate-400">Plantado Alta Injeção</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-64 bg-slate-900">
+
+            <!-- Top Header Bar -->
+            <header class="h-16 border-b border-slate-800 bg-slate-950/60 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-4">
+                    <button id="open-sidebar-btn" class="md:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-800">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <h2 id="page-title" class="text-lg font-bold text-slate-100">Dashboard de Controle</h2>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetDataToDefault()" title="Resetar Dados para Demonstração" class="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-amber-400 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-lg transition-all flex items-center gap-1.5">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Resetar Demo</span>
+                    </button>
+                    <div class="h-8 w-px bg-slate-800"></div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-aqua-400 font-bold text-xs">
+                            AQ
+                        </div>
+                        <span class="text-xs font-medium text-slate-300 hidden sm:inline">Aquarista Pro</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Dynamic Content Container -->
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
+
+                <!-- TAB 1: DASHBOARD -->
+                <section id="tab-dashboard" class="space-y-6">
+                    <!-- Quick Stats Banner -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-400">Última TPA</p>
+                                    <h3 id="dash-tpa-days" class="text-2xl font-bold text-slate-100 mt-1">3 Dias atrás</h3>
+                                    <p id="dash-tpa-sub" class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                                        <i data-lucide="droplet" class="w-3 h-3"></i> 30% Trocados
+                                    </p>
+                                </div>
+                                <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+                                    <i data-lucide="droplet" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-400">Status Geral do Aquário</p>
+                                    <h3 id="dash-status-text" class="text-2xl font-bold text-emerald-400 mt-1">Excelente</h3>
+                                    <p class="text-xs text-slate-400 mt-1">8 parâmetros na faixa ideal</p>
+                                </div>
+                                <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-400">Total Fauna Ativa</p>
+                                    <h3 id="dash-fauna-count" class="text-2xl font-bold text-slate-100 mt-1">32 esp.</h3>
+                                    <p class="text-xs text-slate-400 mt-1">Tetras, Otocinclus, Camarões</p>
+                                </div>
+                                <div class="p-3 bg-teal-500/10 text-teal-400 rounded-xl">
+                                    <i data-lucide="fish" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden group hover:border-slate-600 transition-all">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-400">Variedades de Flora</p>
+                                    <h3 id="dash-flora-count" class="text-2xl font-bold text-slate-100 mt-1">9 Espécies</h3>
+                                    <p class="text-xs text-plant-400 mt-1">Carpete & Moitas em alta</p>
+                                </div>
+                                <div class="p-3 bg-plant-500/10 text-plant-400 rounded-xl">
+                                    <i data-lucide="sprout" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Action Buttons Bar -->
+                    <div class="flex flex-wrap gap-3 p-4 bg-slate-800/40 border border-slate-800 rounded-2xl">
+                        <span class="text-xs text-slate-400 self-center font-medium mr-2">Ações Rápidas:</span>
+                        <button onclick="openModal('modal-tpa')" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all shadow-lg shadow-aqua-600/20">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>Registrar TPA</span>
+                        </button>
+                        <button onclick="openModal('modal-parameter')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                            <i data-lucide="flask-conical" class="w-4 h-4"></i>
+                            <span>Nova Medição</span>
+                        </button>
+                        <button onclick="openModal('modal-timeline')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                            <i data-lucide="camera" class="w-4 h-4"></i>
+                            <span>Nova Foto/Nota</span>
+                        </button>
+                    </div>
+
+                    <!-- Current Water Parameters Grid -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-base text-slate-200 flex items-center gap-2">
+                                <i data-lucide="sliders" class="w-5 h-5 text-aqua-400"></i>
+                                Parâmetros Atuais & Faixas Recomendadas
+                            </h3>
+                            <button onclick="switchTab('parameters')" class="text-xs text-aqua-400 hover:text-aqua-300 font-medium">Ver Histórico Detalhado &rarr;</button>
+                        </div>
+                        <div id="dash-parameters-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Overview Grid: Charts & Overview -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Chart Summary Box -->
+                        <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                                    <i data-lucide="line-chart" class="w-4 h-4 text-aqua-400"></i>
+                                    Tendência pH & CO2 (Últimas Medições)
+                                </h4>
+                                <span class="text-xs text-slate-400 bg-slate-700/50 px-2.5 py-1 rounded-lg">Dinâmico</span>
+                            </div>
+                            <div class="h-64 w-full">
+                                <canvas id="dashQuickChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- System Setup Quick Overview Box -->
+                        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-200 mb-4 flex items-center gap-2">
+                                    <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+                                    Equipamentos do Aquário
+                                </h4>
+                                <div class="space-y-3.5 text-xs">
+                                    <div class="flex justify-between items-center p-2.5 bg-slate-900/60 rounded-xl">
+                                        <span class="text-slate-400">Iluminação:</span>
+                                        <span id="setup-light-val" class="font-semibold text-slate-200">WRGB II 60W (8h/dia)</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2.5 bg-slate-900/60 rounded-xl">
+                                        <span class="text-slate-400">Sistema CO2:</span>
+                                        <span id="setup-co2-val" class="font-semibold text-emerald-400">Cilindro ~2.5 BPS</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2.5 bg-slate-900/60 rounded-xl">
+                                        <span class="text-slate-400">Filtragem:</span>
+                                        <span id="setup-filter-val" class="font-semibold text-slate-200">Canister 1000L/h</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2.5 bg-slate-900/60 rounded-xl">
+                                        <span class="text-slate-400">Substrato Fértil:</span>
+                                        <span id="setup-substrate-val" class="font-semibold text-slate-200">Substrato Vivo 9Kg</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="switchTab('inventory')" class="w-full mt-4 py-2.5 bg-slate-700 hover:bg-slate-600/80 text-slate-200 font-semibold rounded-xl text-xs transition-all text-center">
+                                Gerenciar Inventário Completo
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: PARAMETERS & TPA MANAGEMENT -->
+                <section id="tab-parameters" class="hidden space-y-6">
+                    <!-- Action Bar -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
+                        <div>
+                            <h3 class="font-bold text-slate-100">Histórico de Água e TPAs</h3>
+                            <p class="text-xs text-slate-400">Acompanhe oscilações e registre trocas parciais</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="openModal('modal-tpa')" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                                <i data-lucide="droplets" class="w-4 h-4"></i>
+                                <span>Nova TPA</span>
+                            </button>
+                            <button onclick="openModal('modal-parameter')" class="px-4 py-2 bg-plant-600 hover:bg-plant-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span>Reg. Parâmetro</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Parameter Chart Full View -->
+                    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                            <h4 class="font-bold text-sm text-slate-200">Gráfico de Evolução Temporal</h4>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-xs text-slate-400">Filtrar por:</label>
+                                <select id="chart-parameter-select" onchange="updateMainChart()" class="bg-slate-900 border border-slate-700 text-xs rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-aqua-500">
+                                    <option value="ph">pH</option>
+                                    <option value="co2">CO2 (ppm)</option>
+                                    <option value="temp">Temperatura (°C)</option>
+                                    <option value="nitrate">Nitrato NO3 (ppm)</option>
+                                    <option value="kh">KH (°dKH)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="h-72 w-full">
+                            <canvas id="fullParameterChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Water Parameters Logs & TPA History Tables Dual Column -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Parameter Log Table -->
+                        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5">
+                            <h4 class="font-bold text-sm text-slate-200 mb-4 flex items-center justify-between">
+                                <span>Últimos Registros de Parâmetros</span>
+                                <span id="param-count-badge" class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">0 registros</span>
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-900/60 text-slate-400 font-semibold border-b border-slate-700">
+                                        <tr>
+                                            <th class="p-2.5">Data</th>
+                                            <th class="p-2.5">pH</th>
+                                            <th class="p-2.5">GH/KH</th>
+                                            <th class="p-2.5">NO2/NO3</th>
+                                            <th class="p-2.5">Temp</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="param-history-table" class="divide-y divide-slate-800/60 text-slate-300">
+                                        <!-- Dynamic rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TPA Log Table -->
+                        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5">
+                            <h4 class="font-bold text-sm text-slate-200 mb-4 flex items-center justify-between">
+                                <span>Histórico de TPAs Realizadas</span>
+                                <span id="tpa-count-badge" class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">0 TPAs</span>
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-900/60 text-slate-400 font-semibold border-b border-slate-700">
+                                        <tr>
+                                            <th class="p-2.5">Data</th>
+                                            <th class="p-2.5">Volume %</th>
+                                            <th class="p-2.5">Condicionadores / Notas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tpa-history-table" class="divide-y divide-slate-800/60 text-slate-300">
+                                        <!-- Dynamic rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: INVENTORY (FAUNA, FLORA & HARDSCAPE) -->
+                <section id="tab-inventory" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
+                        <div>
+                            <h3 class="font-bold text-slate-100">Inventário do Ecossistema</h3>
+                            <p class="text-xs text-slate-400">Controle de espécies aquáticas e elementos técnicos</p>
+                        </div>
+                        <button onclick="openModal('modal-item')" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Adicionar Item</span>
+                        </button>
+                    </div>
+
+                    <!-- Category Tabs for Inventory -->
+                    <div class="flex space-x-2 border-b border-slate-800 pb-2">
+                        <button onclick="filterInventory('all')" id="inv-tab-all" class="inv-filter-btn px-4 py-2 rounded-xl text-xs font-semibold bg-aqua-600/20 text-aqua-400 border border-aqua-500/30">Todos</button>
+                        <button onclick="filterInventory('fauna')" id="inv-tab-fauna" class="inv-filter-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Fauna</button>
+                        <button onclick="filterInventory('flora')" id="inv-tab-flora" class="inv-filter-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Flora</button>
+                        <button onclick="filterInventory('hardscape')" id="inv-tab-hardscape" class="inv-filter-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Hardscape & Equipamentos</button>
+                    </div>
+
+                    <!-- Items Grid -->
+                    <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- TAB 4: TIMELINE & EVOLUTION LOG -->
+                <section id="tab-timeline" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
+                        <div>
+                            <h3 class="font-bold text-slate-100">Diário Visual de Evolução</h3>
+                            <p class="text-xs text-slate-400">Registre fotos do aquascape, podas e ajustes de rotina</p>
+                        </div>
+                        <button onclick="openModal('modal-timeline')" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                            <i data-lucide="camera" class="w-4 h-4"></i>
+                            <span>Adicionar Novo Registro</span>
+                        </button>
+                    </div>
+
+                    <!-- Timeline Vertical Container -->
+                    <div id="timeline-container" class="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-2.5 sm:before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- TAB 5: CALCULATORS -->
+                <section id="tab-calculators" class="hidden space-y-6">
+                    <div class="bg-slate-800/40 p-4 rounded-2xl border border-slate-800 mb-6">
+                        <h3 class="font-bold text-slate-100">Calculadoras do Aquarista Plantado</h3>
+                        <p class="text-xs text-slate-400">Ferramentas essenciais para dosagens, volume líquido e nível ideal de CO2</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- Calc 1: Real Water Volume Calculator -->
+                        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+                            <div class="flex items-center space-x-3 text-aqua-400 border-b border-slate-700/80 pb-3">
+                                <i data-lucide="box" class="w-5 h-5"></i>
+                                <h4 class="font-bold text-sm text-slate-100">Calculadora de Volume Real de Água</h4>
+                            </div>
+                            <p class="text-xs text-slate-400">Calcule o volume líquido descontando a espessura do vidro, hardscape e substrato.</p>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Comprimento (cm)</label>
+                                    <input type="number" id="calc-vol-length" value="60" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Largura (cm)</label>
+                                    <input type="number" id="calc-vol-width" value="40" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Altura (cm)</label>
+                                    <input type="number" id="calc-vol-height" value="50" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Substrato (Kg)</label>
+                                    <input type="number" id="calc-vol-substrate" value="12" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Pedras / Troncos (Kg)</label>
+                                    <input type="number" id="calc-vol-hardscape" value="8" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                            </div>
+
+                            <button onclick="calculateRealVolume()" class="w-full py-2.5 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold transition-all">
+                                Calcular Volume Líquido
+                            </button>
+
+                            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-center">
+                                <span class="text-xs text-slate-400">Volume Bruto: <strong id="res-vol-bruto" class="text-slate-200">120L</strong></span>
+                                <span class="mx-2 text-slate-600">|</span>
+                                <span class="text-xs text-slate-400">Volume Real Estimado: <strong id="res-vol-liquido" class="text-emerald-400 text-sm">100L</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Calc 2: Fertilizer Dosing Calculator -->
+                        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+                            <div class="flex items-center space-x-3 text-plant-400 border-b border-slate-700/80 pb-3">
+                                <i data-lucide="flask-round" class="w-5 h-5"></i>
+                                <h4 class="font-bold text-sm text-slate-100">Calculadora de Dosagem de Fertilizantes</h4>
+                            </div>
+                            <p class="text-xs text-slate-400">Estime a dosagem semanal recomendada baseada no volume de água e densidade de plantas.</p>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Volume Líquido (L)</label>
+                                    <input type="number" id="calc-fert-volume" value="100" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Densidade de Plantas</label>
+                                    <select id="calc-fert-density" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                        <option value="low">Baixa (Low Tech)</option>
+                                        <option value="medium">Média (Média Injeção)</option>
+                                        <option value="high" selected>Densa (High Tech)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button onclick="calculateFertilizerDose()" class="w-full py-2.5 bg-plant-600 hover:bg-plant-500 text-white rounded-xl text-xs font-semibold transition-all">
+                                Calcular Doses Recomendadas
+                            </button>
+
+                            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400">Macronutrientes</span>
+                                    <strong id="res-fert-macro" class="text-plant-400">10 mL/sem</strong>
+                                </div>
+                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400">Micronutrientes</span>
+                                    <strong id="res-fert-micro" class="text-teal-400">5 mL/sem</strong>
+                                </div>
+                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800">
+                                    <span class="block text-[10px] text-slate-400">Carbono Líquido</span>
+                                    <strong id="res-fert-carbo" class="text-cyan-400">2 mL/dia</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calc 3: pH x KH x CO2 Table & Interactive Calculator -->
+                        <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 space-y-4">
+                            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                                <div class="flex items-center space-x-3 text-cyan-400">
+                                    <i data-lucide="gauge" class="w-5 h-5"></i>
+                                    <h4 class="font-bold text-sm text-slate-100">Calculadora e Relação pH x KH x CO2 Dissolvido</h4>
+                                </div>
+                                <span class="text-[11px] text-slate-400">Ideal para Plantados: <strong class="text-emerald-400">20 a 30 ppm</strong></span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Informe o pH Medido</label>
+                                    <input type="number" step="0.1" id="calc-co2-ph" value="6.6" oninput="calculateCO2FromTable()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Informe o KH (°dKH)</label>
+                                    <input type="number" step="0.5" id="calc-co2-kh" value="4.0" oninput="calculateCO2FromTable()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                                </div>
+                                <div class="flex flex-col justify-center items-center p-2 bg-slate-800 rounded-xl border border-slate-700">
+                                    <span class="text-[10px] text-slate-400 uppercase">CO2 Estimado</span>
+                                    <span id="res-co2-ppm" class="text-xl font-bold text-emerald-400">30 ppm</span>
+                                    <span id="res-co2-status" class="text-[10px] text-emerald-400">Nível Ideal</span>
+                                </div>
+                            </div>
+
+                            <!-- Interactive CO2 Chart Matrix / Guide -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-center text-[11px]">
+                                    <thead>
+                                        <tr class="bg-slate-900/80 text-slate-400">
+                                            <th class="p-2 border border-slate-700/50">pH \ KH</th>
+                                            <th class="p-2 border border-slate-700/50">2.0°</th>
+                                            <th class="p-2 border border-slate-700/50">3.0°</th>
+                                            <th class="p-2 border border-slate-700/50">4.0°</th>
+                                            <th class="p-2 border border-slate-700/50">5.0°</th>
+                                            <th class="p-2 border border-slate-700/50">6.0°</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-slate-300 font-medium">
+                                        <tr>
+                                            <td class="p-2 bg-slate-900/60 font-semibold border border-slate-700/50">6.2</td>
+                                            <td class="p-2 bg-amber-500/20 text-amber-300 border border-slate-700/50">38 ppm</td>
+                                            <td class="p-2 bg-red-500/20 text-red-300 border border-slate-700/50">57 ppm</td>
+                                            <td class="p-2 bg-red-500/20 text-red-300 border border-slate-700/50">76 ppm</td>
+                                            <td class="p-2 bg-red-500/20 text-red-300 border border-slate-700/50">95 ppm</td>
+                                            <td class="p-2 bg-red-500/20 text-red-300 border border-slate-700/50">114 ppm</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2 bg-slate-900/60 font-semibold border border-slate-700/50">6.6</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">15 ppm</td>
+                                            <td class="p-2 bg-emerald-500/20 text-emerald-300 border border-slate-700/50">23 ppm</td>
+                                            <td class="p-2 bg-emerald-500/20 text-emerald-300 border border-slate-700/50 font-bold">30 ppm</td>
+                                            <td class="p-2 bg-amber-500/20 text-amber-300 border border-slate-700/50">38 ppm</td>
+                                            <td class="p-2 bg-amber-500/20 text-amber-300 border border-slate-700/50">45 ppm</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2 bg-slate-900/60 font-semibold border border-slate-700/50">6.8</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">9 ppm</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">14 ppm</td>
+                                            <td class="p-2 bg-emerald-500/20 text-emerald-300 border border-slate-700/50">19 ppm</td>
+                                            <td class="p-2 bg-emerald-500/20 text-emerald-300 border border-slate-700/50">24 ppm</td>
+                                            <td class="p-2 bg-emerald-500/20 text-emerald-300 border border-slate-700/50">29 ppm</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2 bg-slate-900/60 font-semibold border border-slate-700/50">7.2</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">4 ppm</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">6 ppm</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">8 ppm</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">10 ppm</td>
+                                            <td class="p-2 bg-slate-800 text-slate-400 border border-slate-700/50">12 ppm</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-[10px] text-slate-400 text-center">Verde: Nível de CO2 Ideal (20-30ppm) | Amarelo: Atenção (Alto) | Vermelho: Perigo de Sufocamento da Fauna | Cinza: Insuficiente</p>
+                        </div>
+
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL 1: REGISTRAR PARAMETROS DA AGUA -->
+    <div id="modal-parameter" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/40">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                    <i data-lucide="flask-conical" class="w-4 h-4 text-aqua-400"></i>
+                    Nova Medição de Parâmetros
+                </h3>
+                <button onclick="closeModal('modal-parameter')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleSaveParameter(event)" class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Data / Hora</label>
+                        <input type="datetime-local" id="input-param-date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">pH da Água</label>
+                        <input type="number" step="0.1" id="input-param-ph" placeholder="Ex: 6.6" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">GH (°dGH)</label>
+                        <input type="number" step="0.5" id="input-param-gh" placeholder="Ex: 5" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">KH (°dKH)</label>
+                        <input type="number" step="0.5" id="input-param-kh" placeholder="Ex: 4" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Temp (°C)</label>
+                        <input type="number" step="0.5" id="input-param-temp" placeholder="Ex: 25.5" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Amônia (NH3)</label>
+                        <input type="number" step="0.01" id="input-param-nh3" placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Nitrito (NO2)</label>
+                        <input type="number" step="0.01" id="input-param-no2" placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Nitrato (NO3)</label>
+                        <input type="number" step="1" id="input-param-no3" placeholder="10" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">CO2 Dissolvido (ppm)</label>
+                    <input type="number" step="1" id="input-param-co2" placeholder="Ex: 30" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('modal-parameter')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-aqua-600/20">Salvar Medição</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: REGISTRAR TPA -->
+    <div id="modal-tpa" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/40">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                    <i data-lucide="droplet" class="w-4 h-4 text-blue-400"></i>
+                    Registrar Troca Parcial de Água (TPA)
+                </h3>
+                <button onclick="closeModal('modal-tpa')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleSaveTPA(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Data / Hora</label>
+                    <input type="datetime-local" id="input-tpa-date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Volume Trocado (%)</label>
+                    <input type="number" id="input-tpa-volume" value="30" min="5" max="100" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Produtos / Condicionadores Utilizados</label>
+                    <input type="text" id="input-tpa-products" placeholder="Ex: Prime + Stability + Fertilizantes" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('modal-tpa')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/20">Confirmar TPA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADICIONAR ITEM AO INVENTARIO -->
+    <div id="modal-item" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/40">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-aqua-400"></i>
+                    Adicionar ao Inventário
+                </h3>
+                <button onclick="closeModal('modal-item')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleSaveInventoryItem(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Categoria</label>
+                    <select id="input-item-category" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                        <option value="fauna">Fauna (Peixe / Invertebrado)</option>
+                        <option value="flora">Flora (Planta Aquática)</option>
+                        <option value="hardscape">Hardscape & Equipamentos</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Nome Popular / Equipamento</label>
+                    <input type="text" id="input-item-name" placeholder="Ex: Tetra Neon Cardinal" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Nome Científico / Modelo (Opcional)</label>
+                    <input type="text" id="input-item-sub" placeholder="Ex: Paracheirodon axelrodi" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Quantidade / Potência</label>
+                        <input type="text" id="input-item-qty" placeholder="Ex: 15 unid." required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Status de Saúde / Estado</label>
+                        <select id="input-item-health" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                            <option value="Saudável / Ativo">Saudável / Ativo</option>
+                            <option value="Adaptando">Adaptando</option>
+                            <option value="Atenção">Atenção / Quarentena</option>
+                            <option value="Em Operação">Em Operação</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Data de Introdução</label>
+                    <input type="date" id="input-item-date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('modal-item')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-aqua-600/20">Adicionar Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ADICIONAR REGISTRO NA TIMELINE -->
+    <div id="modal-timeline" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/40">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                    <i data-lucide="camera" class="w-4 h-4 text-aqua-400"></i>
+                    Novo Registro no Diário
+                </h3>
+                <button onclick="closeModal('modal-timeline')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleSaveTimeline(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Data</label>
+                    <input type="date" id="input-time-date" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Título do Acontecimento</label>
+                    <input type="text" id="input-time-title" placeholder="Ex: Poda geral das moitas traseiras" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Observações e Detalhes</label>
+                    <textarea id="input-time-desc" rows="3" placeholder="Detalhes sobre a manutenção, ajuste de fertilizantes ou conduta..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">URL de Imagem / Exemplo</label>
+                    <input type="url" id="input-time-image" placeholder="https://images.unsplash.com/..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-aqua-500">
+                    <span class="text-[10px] text-slate-400 mt-1 block">Deixe em branco para usar uma imagem padrão de aquário plantado.</span>
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('modal-timeline')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-aqua-600 hover:bg-aqua-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-aqua-600/20">Publicar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // MOCK INITIAL DATA FOR FIRST LOAD
+        const initialData = {
+            tankInfo: {
+                name: "Amazonas Nature 120L",
+                type: "Plantado High Tech",
+                volume: 100,
+                co2: "Cilindro ~2.5 BPS",
+                light: "WRGB II 60W (8h/dia)",
+                filter: "Canister 1000L/h",
+                substrate: "Substrato Vivo 9Kg"
+            },
+            parameters: [
+                { date: "2026-10-20T10:00", ph: 6.6, gh: 5, kh: 4, temp: 25.5, nh3: 0, no2: 0, no3: 10, co2: 30 },
+                { date: "2026-10-14T11:30", ph: 6.7, gh: 5, kh: 4, temp: 25.0, nh3: 0, no2: 0, no3: 15, co2: 25 },
+                { date: "2026-10-07T09:15", ph: 6.8, gh: 6, kh: 3.5, temp: 26.0, nh3: 0, no2: 0.05, no3: 20, co2: 20 },
+                { date: "2026-09-30T14:20", ph: 6.5, gh: 5, kh: 4, temp: 25.2, nh3: 0, no2: 0, no3: 12, co2: 32 }
+            ],
+            tpa: [
+                { date: "2026-10-23T15:00", volume: 30, products: "Prime + Seachem Stability + Micro/Macro" },
+                { date: "2026-10-16T14:30", volume: 30, products: "Prime + Solução de Potássio" },
+                { date: "2026-10-09T10:00", volume: 40, products: "Prime + Limpeza de vidros e poda" }
+            ],
+            inventory: [
+                { id: "1", category: "fauna", name: "Tetra Neon Cardinal", sub: "Paracheirodon axelrodi", qty: "20", health: "Saudável / Ativo", date: "2026-08-10" },
+                { id: "2", category: "fauna", name: "Otocinclus Affinis", sub: "Limpa Vidros", qty: "6", health: "Saudável / Ativo", date: "2026-08-15" },
+                { id: "3", category: "fauna", name: "Camarão Red Cherry", sub: "Neocaridina davidi", qty: "12", health: "Saudável / Ativo", date: "2026-09-01" },
+                { id: "4", category: "flora", name: "Rotala HRa", sub: "Planta de Fundo", qty: "2 Maços", health: "Saudável / Ativo", date: "2026-08-10" },
+                { id: "5", category: "flora", name: "Eleocharis Parvula", sub: "Carpete", qty: "3 Potes", health: "Saudável / Ativo", date: "2026-08-12" },
+                { id: "6", category: "flora", name: "Anubias Nana Petite", sub: "Fixada em Tronco", qty: "4 Mudas", health: "Saudável / Ativo", date: "2026-08-20" },
+                { id: "7", category: "hardscape", name: "Tronco Aroeira Tratado", sub: "Hardscape Principal", qty: "1 Peça", health: "Em Operação", date: "2026-08-01" },
+                { id: "8", category: "hardscape", name: "Pedra Dragon Stone", sub: "Hardscape Lateral", qty: "8 Kg", health: "Em Operação", date: "2026-08-01" }
+            ],
+            timeline: [
+                {
+                    id: "t1",
+                    date: "2026-10-22",
+                    title: "Poda drástica da Rotala e Limpeza de Algas",
+                    desc: "Poda de formação realizada na moita de Rotala HRa para densificar. Pequeno foco de algas peteca no difusor tratado com carbono líquido.",
+                    image: "https://images.unsplash.com/photo-1520301255226-bf5f144252e1?auto=format&fit=crop&w=800&q=80"
+                },
+                {
+                    id: "t2",
+                    date: "2026-10-05",
+                    title: "Fechamento completo do Carpete de Eleocharis",
+                    desc: "Após 60 dias de injeção contínua de CO2 e fotoperíodo estabilizado em 8 horas, o carpete cobriu 100% do substrato frontal.",
+                    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80"
+                }
+            ]
+        };
+
+        // PARAMETER SAFETY RANGES FOR PLANTED TANKS
+        const paramRanges = {
+            ph: { min: 6.2, max: 6.8, unit: "" },
+            gh: { min: 4, max: 8, unit: "°dGH" },
+            kh: { min: 2, max: 5, unit: "°dKH" },
+            temp: { min: 23, max: 27, unit: "°C" },
+            nh3: { min: 0, max: 0.01, unit: "ppm" },
+            no2: { min: 0, max: 0.01, unit: "ppm" },
+            no3: { min: 5, max: 20, unit: "ppm" },
+            co2: { min: 20, max: 32, unit: "ppm" }
+        };
+
+        // APP STATE MANAGED IN LOCALSTORAGE
+        let appData = {};
+        let dashQuickChartInstance = null;
+        let fullChartInstance = null;
+
+        // INIT APPLICATION
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStorageData();
+            setupLucideIcons();
+            renderDashboard();
+            renderParametersTab();
+            renderInventoryTab('all');
+            renderTimelineTab();
+            calculateRealVolume();
+            calculateFertilizerDose();
+            calculateCO2FromTable();
+            setupSidebarMobile();
+            setDefaultModalDates();
+        });
+
+        function setupLucideIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        // LOCALSTORAGE MANAGERS
+        function loadStorageData() {
+            const stored = localStorage.getItem('aquascape_pro_data');
+            if (stored) {
+                try {
+                    appData = JSON.parse(stored);
+                } catch(e) {
+                    appData = initialData;
+                }
+            } else {
+                appData = initialData;
+                saveStorageData();
+            }
+        }
+
+        function saveStorageData() {
+            localStorage.setItem('aquascape_pro_data', JSON.stringify(appData));
+        }
+
+        function resetDataToDefault() {
+            if (confirm("Tem certeza que deseja restaurar os dados de demonstração originais?")) {
+                appData = JSON.parse(JSON.stringify(initialData));
+                saveStorageData();
+                showToast("Dados de demonstração restaurados!");
+                setTimeout(() => location.reload(), 500);
+            }
+        }
+
+        // TAB SWITCHER SPA
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'parameters', 'inventory', 'timeline', 'calculators'];
+            tabs.forEach(t => {
+                const element = document.getElementById(`tab-${t}`);
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (element && navBtn) {
+                    if (t === tabId) {
+                        element.classList.remove('hidden');
+                        navBtn.classList.add('bg-aqua-600/20', 'text-aqua-400', 'border', 'border-aqua-500/30');
+                        navBtn.classList.remove('text-slate-400');
+                    } else {
+                        element.classList.add('hidden');
+                        navBtn.classList.remove('bg-aqua-600/20', 'text-aqua-400', 'border', 'border-aqua-500/30');
+                        navBtn.classList.add('text-slate-400');
+                    }
+                }
+            });
+
+            // Update Page Title
+            const titles = {
+                dashboard: "Dashboard de Controle",
+                parameters: "Gestão de Parâmetros da Água e TPAs",
+                inventory: "Inventário de Fauna, Flora & Equipamentos",
+                timeline: "Diário Visual e Linha do Tempo",
+                calculators: "Calculadoras do Aquarista Plantado"
+            };
+            document.getElementById('page-title').textContent = titles[tabId] || "AquaScape Manager";
+
+            // Re-render chart if switching to chart view
+            if (tabId === 'dashboard') {
+                renderDashQuickChart();
+            } else if (tabId === 'parameters') {
+                updateMainChart();
+            }
+
+            // Close mobile menu
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+        }
+
+        // SIDEBAR MOBILE
+        function setupSidebarMobile() {
+            const sidebar = document.getElementById('sidebar');
+            document.getElementById('open-sidebar-btn').addEventListener('click', () => {
+                sidebar.classList.remove('-translate-x-full');
+            });
+            document.getElementById('close-sidebar-btn').addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+            });
+        }
+
+        // DASHBOARD RENDERER
+        function renderDashboard() {
+            const latestParam = appData.parameters[0] || {};
+            const latestTPA = appData.tpa[0];
+
+            // TPA Days calculation
+            if (latestTPA) {
+                const tpaDate = new Date(latestTPA.date);
+                const diffTime = Math.abs(new Date() - tpaDate);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                document.getElementById('dash-tpa-days').textContent = diffDays === 0 ? "Hoje" : `${diffDays} Dias atrás`;
+                document.getElementById('dash-tpa-sub').innerHTML = `<i data-lucide="droplet" class="w-3 h-3"></i> ${latestTPA.volume}% Trocados em ${new Date(latestTPA.date).toLocaleDateString('pt-BR')}`;
+            }
+
+            // Fauna & Flora counters
+            const faunaCount = appData.inventory.filter(i => i.category === 'fauna').reduce((sum, item) => sum + (parseInt(item.qty) || 1), 0);
+            const floraCount = appData.inventory.filter(i => i.category === 'flora').length;
+            document.getElementById('dash-fauna-count').textContent = `${faunaCount} indiv.`;
+            document.getElementById('dash-flora-count').textContent = `${floraCount} Espécies`;
+
+            // Parameters Badges Render
+            const grid = document.getElementById('dash-parameters-grid');
+            grid.innerHTML = '';
+
+            const paramKeys = [
+                { key: 'ph', name: 'pH', unit: '' },
+                { key: 'kh', name: 'KH', unit: '°dKH' },
+                { key: 'gh', name: 'GH', unit: '°dGH' },
+                { key: 'co2', name: 'CO2', unit: 'ppm' },
+                { key: 'temp', name: 'Temp', unit: '°C' },
+                { key: 'nh3', name: 'NH3', unit: 'ppm' },
+                { key: 'no2', name: 'NO2', unit: 'ppm' },
+                { key: 'no3', name: 'NO3', unit: 'ppm' }
+            ];
+
+            let safeCount = 0;
+
+            paramKeys.forEach(p => {
+                const val = latestParam[p.key] !== undefined ? latestParam[p.key] : '--';
+                const range = paramRanges[p.key];
+                let isSafe = true;
+
+                if (val !== '--' && range) {
+                    if (val < range.min || val > range.max) {
+                        isSafe = false;
+                    } else {
+                        safeCount++;
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-2xl border flex flex-col justify-between ${isSafe ? 'bg-slate-800/80 border-slate-700' : 'bg-amber-950/30 border-amber-500/40'}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[11px] font-medium text-slate-400">${p.name}</span>
+                        <span class="w-2 h-2 rounded-full ${isSafe ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}"></span>
+                    </div>
+                    <div class="text-base font-bold ${isSafe ? 'text-slate-100' : 'text-amber-300'}">
+                        ${val} <span class="text-[10px] font-normal text-slate-400">${p.unit}</span>
+                    </div>
+                    <div class="text-[9px] text-slate-400 mt-1">Ideal: ${range ? range.min + '-' + range.max : ''}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Update Tank Status Indicator
+            const statusText = document.getElementById('dash-status-text');
+            if (safeCount >= 7) {
+                statusText.textContent = "Excelente";
+                statusText.className = "text-2xl font-bold text-emerald-400 mt-1";
+            } else if (safeCount >= 5) {
+                statusText.textContent = "Estável";
+                statusText.className = "text-2xl font-bold text-teal-400 mt-1";
+            } else {
+                statusText.textContent = "Atenção";
+                statusText.className = "text-2xl font-bold text-amber-400 mt-1";
+            }
+
+            setupLucideIcons();
+            renderDashQuickChart();
+        }
+
+        // RENDER DASHBOARD QUICK CHART
+        function renderDashQuickChart() {
+            const ctx = document.getElementById('dashQuickChart').getContext('2d');
+            const sortedParams = [...appData.parameters].reverse();
+
+            const labels = sortedParams.map(p => new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+            const phData = sortedParams.map(p => p.ph);
+            const co2Data = sortedParams.map(p => p.co2);
+
+            if (dashQuickChartInstance) dashQuickChartInstance.destroy();
+
+            dashQuickChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'pH',
+                            data: phData,
+                            borderColor: '#14b8a6',
+                            backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'CO2 (ppm)',
+                            data: co2Data,
+                            borderColor: '#22c55e',
+                            borderDash: [5, 5],
+                            tension: 0.3,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+                        y: { type: 'linear', position: 'left', ticks: { color: '#14b8a6' }, grid: { color: '#1e293b' } },
+                        y1: { type: 'linear', position: 'right', ticks: { color: '#22c55e' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        // PARAMETERS TAB & HISTORIC TABLES
+        function renderParametersTab() {
+            // Parameter History Table
+            const paramTable = document.getElementById('param-history-table');
+            paramTable.innerHTML = '';
+            document.getElementById('param-count-badge').textContent = `${appData.parameters.length} registros`;
+
+            appData.parameters.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-all";
+                tr.innerHTML = `
+                    <td class="p-2.5 font-medium text-slate-200">${new Date(p.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td class="p-2.5 font-bold text-teal-400">${p.ph}</td>
+                    <td class="p-2.5">${p.gh}° / ${p.kh}°</td>
+                    <td class="p-2.5">${p.no2} / ${p.no3} ppm</td>
+                    <td class="p-2.5">${p.temp}°C</td>
+                `;
+                paramTable.appendChild(tr);
+            });
+
+            // TPA History Table
+            const tpaTable = document.getElementById('tpa-history-table');
+            tpaTable.innerHTML = '';
+            document.getElementById('tpa-count-badge').textContent = `${appData.tpa.length} TPAs`;
+
+            appData.tpa.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-all";
+                tr.innerHTML = `
+                    <td class="p-2.5 font-medium text-slate-200">${new Date(t.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td class="p-2.5 font-bold text-blue-400">${t.volume}%</td>
+                    <td class="p-2.5 text-slate-400 truncate max-w-xs">${t.products || 'Tratamento Padrão'}</td>
+                `;
+                tpaTable.appendChild(tr);
+            });
+
+            updateMainChart();
+        }
+
+        function updateMainChart() {
+            const ctx = document.getElementById('fullParameterChart').getContext('2d');
+            const paramKey = document.getElementById('chart-parameter-select').value;
+            const sortedParams = [...appData.parameters].reverse();
+
+            const labels = sortedParams.map(p => new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+            const dataValues = sortedParams.map(p => p[paramKey]);
+
+            const configMap = {
+                ph: { label: 'pH da Água', color: '#14b8a6' },
+                co2: { label: 'CO2 Dissolvido (ppm)', color: '#22c55e' },
+                temp: { label: 'Temperatura (°C)', color: '#f59e0b' },
+                nitrate: { label: 'Nitrato NO3 (ppm)', color: '#ef4444' },
+                kh: { label: 'KH Dureza Carbonatada (°dKH)', color: '#3b82f6' }
+            };
+
+            const currentConfig = configMap[paramKey] || { label: paramKey, color: '#14b8a6' };
+
+            if (fullChartInstance) fullChartInstance.destroy();
+
+            fullChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: currentConfig.label,
+                        data: dataValues,
+                        borderColor: currentConfig.color,
+                        backgroundColor: `${currentConfig.color}20`,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        // INVENTORY RENDERER
+        function renderInventoryTab(filterCategory = 'all') {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+
+            const items = filterCategory === 'all' 
+                ? appData.inventory 
+                : appData.inventory.filter(i => i.category === filterCategory);
+
+            if (items.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full p-8 text-center bg-slate-800/30 rounded-2xl border border-slate-800">
+                        <p class="text-slate-400 text-sm">Nenhum item encontrado nesta categoria.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 flex flex-col justify-between hover:border-slate-600 transition-all";
+
+                const categoryIcons = {
+                    fauna: 'fish',
+                    flora: 'sprout',
+                    hardscape: 'box'
+                };
+
+                const categoryColors = {
+                    fauna: 'text-teal-400 bg-teal-500/10',
+                    flora: 'text-plant-400 bg-plant-500/10',
+                    hardscape: 'text-amber-400 bg-amber-500/10'
+                };
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="p-2.5 rounded-xl ${categoryColors[item.category] || 'text-slate-400 bg-slate-800'}">
+                                    <i data-lucide="${categoryIcons[item.category] || 'circle'}" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-sm text-slate-100">${item.name}</h4>
+                                    <p class="text-[11px] text-slate-400 italic">${item.sub || ''}</p>
+                                </div>
+                            </div>
+                            <button onclick="deleteInventoryItem('${item.id}')" class="text-slate-500 hover:text-red-400 transition-all p-1">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center text-xs">
+                            <span class="text-slate-400">Qtd: <strong class="text-slate-200">${item.qty}</strong></span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                ${item.health || 'Saudável'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-[10px] text-slate-400 text-right">
+                        Introduzido em: ${new Date(item.date).toLocaleDateString('pt-BR')}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            setupLucideIcons();
+        }
+
+        function filterInventory(cat) {
+            document.querySelectorAll('.inv-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-aqua-600/20', 'text-aqua-400', 'border', 'border-aqua-500/30');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById(`inv-tab-${cat}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-aqua-600/20', 'text-aqua-400', 'border', 'border-aqua-500/30');
+                activeBtn.classList.remove('text-slate-400');
+            }
+            renderInventoryTab(cat);
+        }
+
+        function deleteInventoryItem(id) {
+            if (confirm("Remover este item do inventário?")) {
+                appData.inventory = appData.inventory.filter(i => i.id !== id);
+                saveStorageData();
+                renderInventoryTab('all');
+                renderDashboard();
+                showToast("Item removido com sucesso!");
+            }
+        }
+
+        // TIMELINE RENDERER
+        function renderTimelineTab() {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+
+            if (appData.timeline.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 text-sm">Nenhum registro no diário ainda.</p>`;
+                return;
+            }
+
+            appData.timeline.forEach(item => {
+                const entry = document.createElement('div');
+                entry.className = "relative group";
+                entry.innerHTML = `
+                    <!-- Timeline Node Icon -->
+                    <div class="absolute -left-6 sm:-left-8 top-1 w-5 h-5 rounded-full bg-slate-900 border-2 border-aqua-500 flex items-center justify-center group-hover:scale-110 transition-all">
+                        <div class="w-1.5 h-1.5 rounded-full bg-aqua-400"></div>
+                    </div>
+
+                    <!-- Timeline Card Content -->
+                    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 space-y-3 hover:border-slate-600 transition-all">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[11px] font-semibold text-aqua-400">${new Date(item.date).toLocaleDateString('pt-BR', { dateStyle: 'long' })}</span>
+                                <h4 class="font-bold text-base text-slate-100 mt-0.5">${item.title}</h4>
+                            </div>
+                            <button onclick="deleteTimelineItem('${item.id}')" class="text-slate-500 hover:text-red-400 p-1">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">${item.desc}</p>
+                        ${item.image ? `<img src="${item.image}" alt="Evolução" class="w-full max-h-72 object-cover rounded-xl border border-slate-700/80 mt-2" onerror="this.src='https://images.unsplash.com/photo-1520301255226-bf5f144252e1?auto=format&fit=crop&w=800&q=80'">` : ''}
+                    </div>
+                `;
+                container.appendChild(entry);
+            });
+
+            setupLucideIcons();
+        }
+
+        function deleteTimelineItem(id) {
+            if (confirm("Deseja apagar este registro do diário?")) {
+                appData.timeline = appData.timeline.filter(t => t.id !== id);
+                saveStorageData();
+                renderTimelineTab();
+                showToast("Registro excluído!");
+            }
+        }
+
+        // CALCULATOR 1: REAL VOLUME
+        function calculateRealVolume() {
+            const length = parseFloat(document.getElementById('calc-vol-length').value) || 0;
+            const width = parseFloat(document.getElementById('calc-vol-width').value) || 0;
+            const height = parseFloat(document.getElementById('calc-vol-height').value) || 0;
+            const substrateKg = parseFloat(document.getElementById('calc-vol-substrate').value) || 0;
+            const hardscapeKg = parseFloat(document.getElementById('calc-vol-hardscape').value) || 0;
+
+            const grossLiters = (length * width * height) / 1000;
+            // Displacement approx: 1kg substrate ~ 0.7L, 1kg stone ~ 0.4L + top rim gap 10%
+            const displacement = (substrateKg * 0.7) + (hardscapeKg * 0.4) + (grossLiters * 0.08);
+            const netLiters = Math.max(0, Math.round(grossLiters - displacement));
+
+            document.getElementById('res-vol-bruto').textContent = `${Math.round(grossLiters)} L`;
+            document.getElementById('res-vol-liquido').textContent = `${netLiters} L`;
+        }
+
+        // CALCULATOR 2: FERTILIZER DOSAGE
+        function calculateFertilizerDose() {
+            const volume = parseFloat(document.getElementById('calc-fert-volume').value) || 100;
+            const density = document.getElementById('calc-fert-density').value;
+
+            let factor = 1;
+            if (density === 'low') factor = 0.4;
+            if (density === 'medium') factor = 0.7;
+            if (density === 'high') factor = 1.2;
+
+            const macro = Math.round((volume * 0.1) * factor);
+            const micro = Math.round((volume * 0.05) * factor);
+            const carbo = (volume * 0.02 * factor).toFixed(1);
+
+            document.getElementById('res-fert-macro').textContent = `${macro} mL/sem`;
+            document.getElementById('res-fert-micro').textContent = `${micro} mL/sem`;
+            document.getElementById('res-fert-carbo').textContent = `${carbo} mL/dia`;
+        }
+
+        // CALCULATOR 3: pH x KH x CO2 RELATIONSHIP
+        function calculateCO2FromTable() {
+            const ph = parseFloat(document.getElementById('calc-co2-ph').value) || 6.6;
+            const kh = parseFloat(document.getElementById('calc-co2-kh').value) || 4.0;
+
+            // CO2 formula = 3 * KH * 10^(7 - pH)
+            const co2Ppm = Math.round(3 * kh * Math.pow(10, (7 - ph)));
+
+            const resPpm = document.getElementById('res-co2-ppm');
+            const resStatus = document.getElementById('res-co2-status');
+
+            resPpm.textContent = `${co2Ppm} ppm`;
+
+            if (co2Ppm >= 20 && co2Ppm <= 32) {
+                resPpm.className = "text-xl font-bold text-emerald-400";
+                resStatus.textContent = "Nível Ideal (Ótimo para Plantas)";
+                resStatus.className = "text-[10px] text-emerald-400 font-semibold";
+            } else if (co2Ppm > 32 && co2Ppm <= 45) {
+                resPpm.className = "text-xl font-bold text-amber-400";
+                resStatus.textContent = "Atenção (Alto - Monitore a Fauna)";
+                resStatus.className = "text-[10px] text-amber-400 font-semibold";
+            } else if (co2Ppm > 45) {
+                resPpm.className = "text-xl font-bold text-red-400";
+                resStatus.textContent = "Perigo! Sufocamento da Fauna";
+                resStatus.className = "text-[10px] text-red-400 font-semibold";
+            } else {
+                resPpm.className = "text-xl font-bold text-slate-400";
+                resStatus.textContent = "Baixo (Insuficiente para High Tech)";
+                resStatus.className = "text-[10px] text-slate-400 font-semibold";
+            }
+        }
+
+        // MODALS HANDLING & FORM SUBMISSIONS
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function setDefaultModalDates() {
+            const now = new Date();
+            const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            const localDate = now.toISOString().slice(0, 10);
+
+            if (document.getElementById('input-param-date')) document.getElementById('input-param-date').value = localIso;
+            if (document.getElementById('input-tpa-date')) document.getElementById('input-tpa-date').value = localIso;
+            if (document.getElementById('input-item-date')) document.getElementById('input-item-date').value = localDate;
+            if (document.getElementById('input-time-date')) document.getElementById('input-time-date').value = localDate;
+        }
+
+        function handleSaveParameter(e) {
+            e.preventDefault();
+            const newRecord = {
+                date: document.getElementById('input-param-date').value,
+                ph: parseFloat(document.getElementById('input-param-ph').value),
+                gh: parseFloat(document.getElementById('input-param-gh').value) || 0,
+                kh: parseFloat(document.getElementById('input-param-kh').value) || 0,
+                temp: parseFloat(document.getElementById('input-param-temp').value) || 0,
+                nh3: parseFloat(document.getElementById('input-param-nh3').value) || 0,
+                no2: parseFloat(document.getElementById('input-param-no2').value) || 0,
+                no3: parseFloat(document.getElementById('input-param-no3').value) || 0,
+                co2: parseFloat(document.getElementById('input-param-co2').value) || 0
+            };
+
+            appData.parameters.unshift(newRecord);
+            saveStorageData();
+            renderDashboard();
+            renderParametersTab();
+            closeModal('modal-parameter');
+            showToast("Nova medição registrada com sucesso!");
+        }
+
+        function handleSaveTPA(e) {
+            e.preventDefault();
+            const newTPA = {
+                date: document.getElementById('input-tpa-date').value,
+                volume: parseInt(document.getElementById('input-tpa-volume').value),
+                products: document.getElementById('input-tpa-products').value || "Troca Padrão"
+            };
+
+            appData.tpa.unshift(newTPA);
+            saveStorageData();
+            renderDashboard();
+            renderParametersTab();
+            closeModal('modal-tpa');
+            showToast("TPA registrada com sucesso!");
+        }
+
+        function handleSaveInventoryItem(e) {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now().toString(),
+                category: document.getElementById('input-item-category').value,
+                name: document.getElementById('input-item-name').value,
+                sub: document.getElementById('input-item-sub').value,
+                qty: document.getElementById('input-item-qty').value,
+                health: document.getElementById('input-item-health').value,
+                date: document.getElementById('input-item-date').value
+            };
+
+            appData.inventory.unshift(newItem);
+            saveStorageData();
+            renderInventoryTab('all');
+            renderDashboard();
+            closeModal('modal-item');
+            showToast("Item adicionado ao inventário!");
+        }
+
+        function handleSaveTimeline(e) {
+            e.preventDefault();
+            const newLog = {
+                id: Date.now().toString(),
+                date: document.getElementById('input-time-date').value,
+                title: document.getElementById('input-time-title').value,
+                desc: document.getElementById('input-time-desc').value,
+                image: document.getElementById('input-time-image').value || "https://images.unsplash.com/photo-1520301255226-bf5f144252e1?auto=format&fit=crop&w=800&q=80"
+            };
+
+            appData.timeline.unshift(newLog);
+            saveStorageData();
+            renderTimelineTab();
+            closeModal('modal-timeline');
+            showToast("Novo diário de evolução salvo!");
+        }
+
+        // TOAST NOTIFICATION UTILITY
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const messageEl = document.getElementById('toast-message');
+            messageEl.textContent = msg;
+
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
